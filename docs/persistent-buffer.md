@@ -1,3 +1,5 @@
+_TODO: update this documentation_
+
 # Persistent Buffer
 
 `PersistentBuffer` is the first of a series of practical Akka Streams flow components. It works like the Akka Streams buffer with the difference that the content of the buffer is stored in a series of memory-mapped files in the directory given at construction of the `PersistentBuffer`. This allows the buffer size to be virtually limitless, not use the JVM heap for storage, and have extremely good performance in the range of a million messages/second at the same time.
