@@ -29,7 +29,7 @@ object QueueSerializer {
   def apply[T: ClassTag](): QueueSerializer[T] = classTag[T] match {
     case t if classOf[ByteString] == t.runtimeClass =>
       new ByteStringSerializer().asInstanceOf[QueueSerializer[T]]
-    case t if classOf[AnyRef] isAssignableFrom t.runtimeClass =>
+    case t if classOf[AnyRef].isAssignableFrom(t.runtimeClass) =>
       new ObjectSerializer[T]
     case t if classOf[Long] == t.runtimeClass =>
       new LongSerializer().asInstanceOf[QueueSerializer[T]]
@@ -82,7 +82,7 @@ class ByteStringSerializer extends QueueSerializer[ByteString] {
 
   def readElement(wire: WireIn): Option[ByteString] =
     // TODO: wire.read() may need some optimization. It uses a StringBuilder underneath
-    Option(wire.read().bytes) map (ByteString(_))
+    Option(wire.read().bytes).map(ByteString(_))
 }
 
 class ObjectSerializer[T: ClassTag] extends QueueSerializer[T] {
@@ -124,7 +124,7 @@ class ByteSerializer extends QueueSerializer[Byte] {
 
 class CharSerializer extends QueueSerializer[Char] {
 
-  def readElement(wire: WireIn): Option[Char] = Option(wire.read().int16) map (_.toChar)
+  def readElement(wire: WireIn): Option[Char] = Option(wire.read().int16).map(_.toChar)
 
   def writeElement(element: Char, wire: WireOut): Unit = wire.write().int16(element.toShort)
 }
@@ -138,7 +138,7 @@ class DoubleSerializer extends QueueSerializer[Double] {
 
 class FloatSerializer extends QueueSerializer[Float] {
 
-  def readElement(wire: WireIn): Option[Float] = Option(wire.read().float64) map (_.toFloat)
+  def readElement(wire: WireIn): Option[Float] = Option(wire.read().float64).map(_.toFloat)
 
   def writeElement(element: Float, wire: WireOut): Unit = wire.write().float64(element)
 }

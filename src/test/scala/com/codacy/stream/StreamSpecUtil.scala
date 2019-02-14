@@ -68,7 +68,8 @@ class StreamSpecUtil[T, S](outputPort: Int = 1) {
   val minRandom = 100
   lazy val random = Random.nextInt(elementCount - minRandom - 1) + minRandom
   lazy val filterCounter = new AtomicInteger(0)
-  lazy val filterARandomElement = Flow[Event[T]].map(e => (e, filterCounter.incrementAndGet())).filter(_._2 != random).map(_._1)
+  lazy val filterARandomElement =
+    Flow[Event[T]].map(e => (e, filterCounter.incrementAndGet())).filter(_._2 != random).map(_._1)
 
   def commitCounter(outputPortId: Int) = atomicCounter(outputPortId).incrementAndGet()
 

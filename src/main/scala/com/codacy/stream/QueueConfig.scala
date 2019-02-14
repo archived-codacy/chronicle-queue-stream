@@ -38,22 +38,28 @@ object QueueConfig {
 
   def from(config: Config): QueueConfig = {
     val persistDir = new File(config.getString("persist-dir"))
-    val cycle = Try(config.getString("roll-cycle")).toOption.map{ s =>
-      RollCycles.valueOf(s.toUpperCase)
-    } getOrElse defaultCycle
-    val wireType = Try(config.getString("wire-type")).toOption.map{ s =>
-      WireType.valueOf(s.toUpperCase)
-    } getOrElse defaultWireType
-    val blockSize = Try(config.getMemorySize("block-size")).toOption map (_.toBytes) getOrElse defaultBlockSize
+    val cycle = Try(config.getString("roll-cycle")).toOption
+      .map { s =>
+        RollCycles.valueOf(s.toUpperCase)
+      }
+      .getOrElse(defaultCycle)
+    val wireType = Try(config.getString("wire-type")).toOption
+      .map { s =>
+        WireType.valueOf(s.toUpperCase)
+      }
+      .getOrElse(defaultWireType)
+    val blockSize = Try(config.getMemorySize("block-size")).toOption.map(_.toBytes).getOrElse(defaultBlockSize)
     val indexSpacing =
       Try(config.getMemorySize("index-spacing")).toOption.map(_.toBytes.toInt).getOrElse(cycle.defaultIndexSpacing)
     val indexCount = Try(config.getInt("index-count")).toOption.getOrElse(cycle.defaultIndexCount)
     val outputPorts = Try(config.getInt("output-ports")).toOption.getOrElse(defaultOutputPort)
-    val commitOrder = Try(config.getString("commit-order-policy")).toOption.map{ s =>
-      if (s == "strict") Strict
-      else if (s == "lenient") Lenient
-      else throw new BadValue("commit-order-policy", "Allowed values: strict or lenient")
-    } getOrElse defaultCommitOrderPolicy
+    val commitOrder = Try(config.getString("commit-order-policy")).toOption
+      .map { s =>
+        if (s == "strict") Strict
+        else if (s == "lenient") Lenient
+        else throw new BadValue("commit-order-policy", "Allowed values: strict or lenient")
+      }
+      .getOrElse(defaultCommitOrderPolicy)
     QueueConfig(
       persistDir,
       cycle,

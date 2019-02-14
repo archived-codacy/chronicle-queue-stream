@@ -71,7 +71,7 @@ abstract class ChronicleQueueBase[T, S](
           queue.enqueue(element)
           onPushCallback()
           if (downstreamWaiting) {
-            queue.dequeue() foreach { element =>
+            queue.dequeue().foreach { element =>
               push(out, elementOut(element))
               downstreamWaiting = false
               lastPushed = element.index

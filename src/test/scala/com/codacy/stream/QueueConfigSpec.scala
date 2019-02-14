@@ -24,7 +24,6 @@ import net.openhft.chronicle.queue.RollCycles
 import net.openhft.chronicle.wire.WireType
 import org.scalatest.{FlatSpec, Matchers}
 
-
 class QueueConfigSpec extends FlatSpec with Matchers {
 
   it should "properly read the configuration from config" in {
@@ -101,6 +100,6 @@ class QueueConfigSpec extends FlatSpec with Matchers {
         | commit-order-policy = invalid
       """.stripMargin
     val config = ConfigFactory.parseString(configText)
-    a [ConfigException.BadValue] should be thrownBy QueueConfig.from(config)
+    a[ConfigException.BadValue] should be thrownBy QueueConfig.from(config)
   }
 }

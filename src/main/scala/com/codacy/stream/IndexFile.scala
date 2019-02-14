@@ -22,4 +22,5 @@ object IndexFile {
     of(new File(filename), chunkSize, overlapSize)
 }
 
-class IndexFile(file: File, raf: RandomAccessFile, chunkSize: Long, overlapSize: Long, capacity: Long) extends MappedFile(file, raf, chunkSize, overlapSize, capacity, false)
+class IndexFile(file: File, raf: RandomAccessFile, chunkSize: Long, overlapSize: Long, capacity: Long)
+    extends MappedFile(file, raf, chunkSize, overlapSize, capacity, false)

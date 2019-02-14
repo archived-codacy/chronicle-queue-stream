@@ -43,14 +43,14 @@ class ChronicleQueueCommitOrderSpec extends FlatSpec with Matchers with BeforeAn
   it should "fail when an out of order commit is attempted and commit-order-policy = strict" in {
     val util = new StreamSpecUtil[Int, Event[Int]]
     import util._
-    val buffer = ChronicleQueueAtLeastOnce[Int](ConfigFactory.parseString("commit-order-policy = strict").withFallback(config))
+    val buffer =
+      ChronicleQueueAtLeastOnce[Int](ConfigFactory.parseString("commit-order-policy = strict").withFallback(config))
     val commit = buffer.commit[Int]
 
-    val streamGraph = RunnableGraph.fromGraph(GraphDSL.create(flowCounter) { implicit builder =>
-      sink =>
-        import GraphDSL.Implicits._
-        in ~> buffer.async ~> filterARandomElement ~> commit ~> sink
-        ClosedShape
+    val streamGraph = RunnableGraph.fromGraph(GraphDSL.create(flowCounter) { implicit builder => sink =>
+      import GraphDSL.Implicits._
+      in ~> buffer.async ~> filterARandomElement ~> commit ~> sink
+      ClosedShape
     })
     val sinkF = streamGraph.run()
     Await.result(sinkF.failed, awaitMax) shouldBe an[CommitOrderException]
@@ -60,14 +60,14 @@ class ChronicleQueueCommitOrderSpec extends FlatSpec with Matchers with BeforeAn
   it should "not fail when an out of order commit is attempted and commit-order-policy = lenient" in {
     val util = new StreamSpecUtil[Int, Event[Int]]
     import util._
-    val buffer = ChronicleQueueAtLeastOnce[Int](ConfigFactory.parseString("commit-order-policy = lenient").withFallback(config))
+    val buffer =
+      ChronicleQueueAtLeastOnce[Int](ConfigFactory.parseString("commit-order-policy = lenient").withFallback(config))
     val commit = buffer.commit[Int]
 
-    val streamGraph = RunnableGraph.fromGraph(GraphDSL.create(flowCounter) { implicit builder =>
-      sink =>
-        import GraphDSL.Implicits._
-        in ~> buffer.async ~> filterARandomElement ~> commit ~> sink
-        ClosedShape
+    val streamGraph = RunnableGraph.fromGraph(GraphDSL.create(flowCounter) { implicit builder => sink =>
+      import GraphDSL.Implicits._
+      in ~> buffer.async ~> filterARandomElement ~> commit ~> sink
+      ClosedShape
     })
 
     val countFuture = streamGraph.run()

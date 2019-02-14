@@ -12,8 +12,11 @@ import com.codacy.stream.Timeouts._
 import scala.concurrent.Await
 import scala.reflect._
 
-abstract class ChronicleQueueSourceSinkSpec[T: ClassTag, Q <: QueueSerializer[T]: Manifest]
-(typeName: String) extends FlatSpec with Matchers with BeforeAndAfterAll with Eventually {
+abstract class ChronicleQueueSourceSinkSpec[T: ClassTag, Q <: QueueSerializer[T]: Manifest](typeName: String)
+    extends FlatSpec
+    with Matchers
+    with BeforeAndAfterAll
+    with Eventually {
 
   implicit val system = ActorSystem(s"Persistent${typeName}SourceSinkSpec", ChronicleQueueSpec.testConfig)
   implicit val mat = ActorMaterializer()
@@ -21,7 +24,7 @@ abstract class ChronicleQueueSourceSinkSpec[T: ClassTag, Q <: QueueSerializer[T]
   implicit override val patienceConfig = PatienceConfig(timeout = Span(3, Seconds)) // extend eventually timeout for CI
   import SourceSinkSpecUtil._
 
-  val transform = Flow[Int] map createElement
+  val transform = Flow[Int].map(createElement)
 
   override def afterAll = {
     Await.ready(system.terminate(), awaitMax)
@@ -36,11 +39,11 @@ abstract class ChronicleQueueSourceSinkSpec[T: ClassTag, Q <: QueueSerializer[T]
     import util._
     val sinkCQ = ChronicleQueue.sink[T](config)
     val sourceCQ = ChronicleQueue.source[T](config, "source.idx")
-    
+
     val countFuture = sourceCQ.take(elementCount).runWith(flowCounter)
-    
+
     in.via(transform).runWith(sinkCQ)
-    
+
     val count = Await.result(countFuture, awaitMax)
     count shouldBe elementCount
     clean()
@@ -51,21 +54,19 @@ abstract class ChronicleQueueSourceSinkSpec[T: ClassTag, Q <: QueueSerializer[T]
     import util._
     val sinkCQ = ChronicleQueue.sink[T](config)
     val sourceCQ = ChronicleQueue.source[T](config, "source.idx")
-    
-    val streamGraph1 = RunnableGraph.fromGraph(GraphDSL.create(sinkCQ) { implicit builder =>
-      sink =>
-        import GraphDSL.Implicits._
-        in ~> transform ~> sink
-        ClosedShape
+
+    val streamGraph1 = RunnableGraph.fromGraph(GraphDSL.create(sinkCQ) { implicit builder => sink =>
+      import GraphDSL.Implicits._
+      in ~> transform ~> sink
+      ClosedShape
     })
 
-    val streamGraph2 = RunnableGraph.fromGraph(GraphDSL.create(flowCounter) { implicit builder =>
-      sink =>
-        import GraphDSL.Implicits._
-        val take = Flow[T].take(elementCount)
+    val streamGraph2 = RunnableGraph.fromGraph(GraphDSL.create(flowCounter) { implicit builder => sink =>
+      import GraphDSL.Implicits._
+      val take = Flow[T].take(elementCount)
 
-        sourceCQ ~> take ~> sink
-        ClosedShape
+      sourceCQ ~> take ~> sink
+      ClosedShape
     })
 
     val countFuture = streamGraph2.run()
@@ -78,7 +79,8 @@ abstract class ChronicleQueueSourceSinkSpec[T: ClassTag, Q <: QueueSerializer[T]
 
 }
 
-class ChronicleByteStringSourceSinkSpec extends ChronicleQueueSourceSinkSpec[ByteString, ByteStringSerializer]("ByteString") {
+class ChronicleByteStringSourceSinkSpec
+    extends ChronicleQueueSourceSinkSpec[ByteString, ByteStringSerializer]("ByteString") {
 
   def createElement(n: Int): ByteString = ByteString(s"Hello $n")
 
@@ -156,4 +158,3 @@ class ChroniclePersonSourceSinkSpec extends ChronicleQueueSourceSinkSpec[Person,
 
   def format(element: Person): String = element.toString
 }
-

@@ -36,8 +36,7 @@ import scala.concurrent.{Await, Promise}
 import scala.reflect._
 
 object ChronicleQueueSpec {
-  val testConfig = ConfigFactory.parseString(
-    """
+  val testConfig = ConfigFactory.parseString("""
       |akka.actor.default-dispatcher {
       |  executor = "affinity-pool-executor"
       |  affinity-pool-executor {
@@ -48,8 +47,11 @@ object ChronicleQueueSpec {
     """.stripMargin)
 }
 
-abstract class ChronicleQueueSpec[T: ClassTag, Q <: QueueSerializer[T]: Manifest]
-(typeName: String) extends FlatSpec with Matchers with BeforeAndAfterAll with Eventually {
+abstract class ChronicleQueueSpec[T: ClassTag, Q <: QueueSerializer[T]: Manifest](typeName: String)
+    extends FlatSpec
+    with Matchers
+    with BeforeAndAfterAll
+    with Eventually {
 
   implicit val system = ActorSystem(s"Persistent${typeName}BufferSpec", ChronicleQueueSpec.testConfig)
   implicit val mat = ActorMaterializer()
@@ -58,7 +60,7 @@ abstract class ChronicleQueueSpec[T: ClassTag, Q <: QueueSerializer[T]: Manifest
   import StreamSpecUtil._
   import system.dispatcher
 
-  val transform = Flow[Int] map createElement
+  val transform = Flow[Int].map(createElement)
 
   override def afterAll = {
     Await.ready(system.terminate(), awaitMax)
@@ -72,7 +74,7 @@ abstract class ChronicleQueueSpec[T: ClassTag, Q <: QueueSerializer[T]: Manifest
     val util = new StreamSpecUtil[T, T]
     import util._
     val buffer = ChronicleQueue[T](config)
-    buffer.queue.serializer shouldBe a [Q]
+    buffer.queue.serializer shouldBe a[Q]
     val countFuture = in.via(transform).via(buffer.async).runWith(flowCounter)
     val count = Await.result(countFuture, awaitMax)
     count shouldBe elementCount
@@ -84,11 +86,10 @@ abstract class ChronicleQueueSpec[T: ClassTag, Q <: QueueSerializer[T]: Manifest
     val util = new StreamSpecUtil[T, T]
     import util._
     val buffer = ChronicleQueue[T](config)
-    val streamGraph = RunnableGraph.fromGraph(GraphDSL.create(flowCounter) { implicit builder =>
-      sink =>
-        import GraphDSL.Implicits._
-        in ~> transform ~> buffer.async ~> sink
-        ClosedShape
+    val streamGraph = RunnableGraph.fromGraph(GraphDSL.create(flowCounter) { implicit builder => sink =>
+      import GraphDSL.Implicits._
+      in ~> transform ~> buffer.async ~> sink
+      ClosedShape
     })
     val countFuture = streamGraph.run()
     val count = Await.result(countFuture, awaitMax)
@@ -103,19 +104,24 @@ abstract class ChronicleQueueSpec[T: ClassTag, Q <: QueueSerializer[T]: Manifest
     import util._
     val buffer = ChronicleQueue[T](config)
     val t0 = System.nanoTime
-    def counter(recordFn: Long => Unit) = Flow[Any].map( _ => 1L).reduce(_ + _).map { s =>
-      recordFn(System.nanoTime - t0)
-      s
-    }.toMat(Sink.head)(Keep.right)
+    def counter(recordFn: Long => Unit) =
+      Flow[Any]
+        .map(_ => 1L)
+        .reduce(_ + _)
+        .map { s =>
+          recordFn(System.nanoTime - t0)
+          s
+        }
+        .toMat(Sink.head)(Keep.right)
 
-    val streamGraph = RunnableGraph.fromGraph(GraphDSL.create(counter(t1 = _), flowCounter)((_,_)) { implicit builder =>
-      (sink, total) =>
+    val streamGraph = RunnableGraph.fromGraph(GraphDSL.create(counter(t1 = _), flowCounter)((_, _)) {
+      implicit builder => (sink, total) =>
         import GraphDSL.Implicits._
         val bc1 = builder.add(Broadcast[T](2))
         val bc2 = builder.add(Broadcast[T](2))
         in ~> transform ~> bc1 ~> buffer.async ~> throttle ~> bc2 ~> sink
-                                                              bc2 ~> total
-                           bc1 ~> counter(t2 = _)
+        bc2 ~> total
+        bc1 ~> counter(t2 = _)
         ClosedShape
     })
     val (countF, totalF) = streamGraph.run()
@@ -141,25 +147,29 @@ abstract class ChronicleQueueSpec[T: ClassTag, Q <: QueueSerializer[T]: Manifest
     val finishedGenerating = Promise[Done]
     val counter = new AtomicInteger(0)
 
-    def fireFinished() = Flow[T].map { e =>
-      if(counter.incrementAndGet() == failTestAt) finishedGenerating success Done
-      e
-    }.toMat(Sink.ignore)(Keep.right)
+    def fireFinished() =
+      Flow[T]
+        .map { e =>
+          if (counter.incrementAndGet() == failTestAt) finishedGenerating.success(Done)
+          e
+        }
+        .toMat(Sink.ignore)(Keep.right)
 
-    val shutdownF = finishedGenerating.future map { d => mat.shutdown(); d }
+    val shutdownF = finishedGenerating.future.map { d =>
+      mat.shutdown(); d
+    }
 
-    val graph = RunnableGraph.fromGraph(GraphDSL.create(Sink.ignore) { implicit builder =>
-      sink =>
-        import GraphDSL.Implicits._
-        val buffer = ChronicleQueue[T](config)
-          .withOnPushCallback(() => pBufferInCount.incrementAndGet())
-          .withOnCommitCallback(() => commitCount.incrementAndGet())
-        val bc = builder.add(Broadcast[T](2))
+    val graph = RunnableGraph.fromGraph(GraphDSL.create(Sink.ignore) { implicit builder => sink =>
+      import GraphDSL.Implicits._
+      val buffer = ChronicleQueue[T](config)
+        .withOnPushCallback(() => pBufferInCount.incrementAndGet())
+        .withOnCommitCallback(() => commitCount.incrementAndGet())
+      val bc = builder.add(Broadcast[T](2))
 
-        in ~> transform ~> bc ~> buffer.async ~> throttle ~> sink
-                           bc ~> fireFinished()
+      in ~> transform ~> bc ~> buffer.async ~> throttle ~> sink
+      bc ~> fireFinished()
 
-        ClosedShape
+      ClosedShape
     })
     val sinkF = graph.run()(mat)
     Await.result(shutdownF, awaitMax)
@@ -187,12 +197,13 @@ abstract class ChronicleQueueSpec[T: ClassTag, Q <: QueueSerializer[T]: Manifest
       else n
     }
 
-    val graph = RunnableGraph.fromGraph(GraphDSL.create(Sink.ignore) { implicit builder =>
-      sink =>
-        import GraphDSL.Implicits._
-        val buffer = ChronicleQueue[T](config).withOnPushCallback(() => inCounter.incrementAndGet()).withOnCommitCallback(() => outCount.incrementAndGet())
-        in ~> transform ~> buffer.async ~> throttle ~> injectError ~> sink
-        ClosedShape
+    val graph = RunnableGraph.fromGraph(GraphDSL.create(Sink.ignore) { implicit builder => sink =>
+      import GraphDSL.Implicits._
+      val buffer = ChronicleQueue[T](config)
+        .withOnPushCallback(() => inCounter.incrementAndGet())
+        .withOnCommitCallback(() => outCount.incrementAndGet())
+      in ~> transform ~> buffer.async ~> throttle ~> injectError ~> sink
+      ClosedShape
     })
     val sinkF = graph.run()(mat)
     Await.result(sinkF.failed, awaitMax) shouldBe an[NumberFormatException]
@@ -213,14 +224,15 @@ abstract class ChronicleQueueSpec[T: ClassTag, Q <: QueueSerializer[T]: Manifest
       else n
     }
 
-    def updateCounter() = Sink.foreach[Any] { _ => recordCount.incrementAndGet() }
+    def updateCounter() = Sink.foreach[Any] { _ =>
+      recordCount.incrementAndGet()
+    }
 
     val buffer = ChronicleQueue[T](config)
-    val graph = RunnableGraph.fromGraph(GraphDSL.create(updateCounter()) { implicit builder =>
-      sink =>
-        import GraphDSL.Implicits._
-        in ~> injectError ~> transform ~> buffer.async ~> throttle ~> sink
-        ClosedShape
+    val graph = RunnableGraph.fromGraph(GraphDSL.create(updateCounter()) { implicit builder => sink =>
+      import GraphDSL.Implicits._
+      in ~> injectError ~> transform ~> buffer.async ~> throttle ~> sink
+      ClosedShape
     })
     val countF = graph.run()(mat)
     Await.result(countF, awaitMax)
@@ -232,15 +244,14 @@ abstract class ChronicleQueueSpec[T: ClassTag, Q <: QueueSerializer[T]: Manifest
   private def resumeGraphAndDoAssertion(beforeShutDown: Long, restartFrom: Int)(implicit util: StreamSpecUtil[T, T]) = {
     import util._
     val buffer = ChronicleQueue[T](config)
-    val graph = RunnableGraph.fromGraph(
-      GraphDSL.create(flowCounter, head)((_,_)) { implicit builder =>
-        (sink, first) =>
-          import GraphDSL.Implicits._
+    val graph = RunnableGraph.fromGraph(GraphDSL.create(flowCounter, head)((_, _)) {
+      implicit builder => (sink, first) =>
+        import GraphDSL.Implicits._
         val bc = builder.add(Broadcast[T](2))
-          Source(restartFrom to (elementCount + elementsAfterFail)) ~> transform ~> buffer.async ~> bc ~> sink
-                                                                                                    bc ~> first
-          ClosedShape
-      })
+        Source(restartFrom to (elementCount + elementsAfterFail)) ~> transform ~> buffer.async ~> bc ~> sink
+        bc ~> first
+        ClosedShape
+    })
     val (countF, firstF) = graph.run()(ActorMaterializer())
     val afterRecovery = Await.result(countF, awaitMax)
     val first = Await.result(firstF, awaitMax)
@@ -338,4 +349,3 @@ class PersistentPersonBufferSpec extends ChronicleQueueSpec[Person, PersonSerial
 
   def format(element: Person): String = element.toString
 }
-

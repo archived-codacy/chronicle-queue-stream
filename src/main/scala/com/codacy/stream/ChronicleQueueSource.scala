@@ -43,12 +43,10 @@ class ChronicleQueueSource[T](val queue: PersistentQueue[T])(
 
       private val failureCallback = getAsyncCallback[Exception](handleFailure)
 
-      val pendingOffers = new PriorityQueue[Event[T]]()(
-        new Ordering[Event[T]]{
-          def compare(x: Event[T], y: Event[T]) = // inverse order
-            Ordering.Long.compare(y.index, x.index)
-        }
-      )
+      val pendingOffers = new PriorityQueue[Event[T]]()(new Ordering[Event[T]] {
+        def compare(x: Event[T], y: Event[T]) = // inverse order
+          Ordering.Long.compare(y.index, x.index)
+      })
 
       var terminating = false
 

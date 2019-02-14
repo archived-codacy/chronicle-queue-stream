@@ -55,7 +55,7 @@ class PersistentQueueSpec extends FlatSpec with Matchers with PrivateMethodTeste
     val queue = new PersistentQueue[ByteString](QueueConfig(tempPath.toFile, outputPorts = 3))
     val element = ByteString("Hello!")
     queue.enqueue(element)
-    (0 until queue.totalOutputPorts) foreach { outputPortId =>
+    (0 until queue.totalOutputPorts).foreach { outputPortId =>
       val elementOption = queue.dequeue(outputPortId)
       elementOption.value.entry shouldBe element
     }
@@ -82,7 +82,7 @@ class PersistentQueueSpec extends FlatSpec with Matchers with PrivateMethodTeste
     for { i <- 1 to 1000000 } {
       val element = ByteString(s"Hello $i")
       queue.enqueue(element)
-      (0 until queue.totalOutputPorts) foreach { outputPortId =>
+      (0 until queue.totalOutputPorts).foreach { outputPortId =>
         val elementOption = queue.dequeue(outputPortId)
         elementOption.value.entry shouldBe element
       }
@@ -149,7 +149,7 @@ class PersistentQueueSpec extends FlatSpec with Matchers with PrivateMethodTeste
 
   it should "throw the appropriate exception if queue file cannot be created" in {
     val badPath = Files.createTempFile("testException", "test")
-    a [FileNotFoundException] should be thrownBy new PersistentQueue[ByteString](QueueConfig(badPath.toFile))
+    a[FileNotFoundException] should be thrownBy new PersistentQueue[ByteString](QueueConfig(badPath.toFile))
     Files.delete(badPath)
   }
 
@@ -157,8 +157,11 @@ class PersistentQueueSpec extends FlatSpec with Matchers with PrivateMethodTeste
     val tempPath = Files.createTempDirectory("persistent_queue")
     val queue = new PersistentQueue[ByteString](QueueConfig(tempPath.toFile, rollCycle = RollCycles.TEST_SECONDLY))
 
-    def dataFiles = tempPath.toFile.listFiles()
-      .toList.filterNot(file => file.getName == "tailer.idx" || file.getName.endsWith(".cq4t"))
+    def dataFiles =
+      tempPath.toFile
+        .listFiles()
+        .toList
+        .filterNot(file => file.getName == "tailer.idx" || file.getName.endsWith(".cq4t"))
 
     addToQueue(0, 0)
 
@@ -177,13 +180,13 @@ class PersistentQueueSpec extends FlatSpec with Matchers with PrivateMethodTeste
     // case 1: it should not cleanup unprocessed queue file
     val parser = queue.fileIdParser
     val oldestFile = dataFiles.minBy(parser.toLong)
-    queue.resourceManager invokePrivate deleteOlderFiles(0, dataFiles.filter(_ != oldestFile).head)
+    queue.resourceManager.invokePrivate(deleteOlderFiles(0, dataFiles.filter(_ != oldestFile).head))
     dataFiles.filter(f => f == oldestFile) shouldBe empty
     dataFiles should not be empty
 
     // case 2: it should cleanup processed queue file, except last file
     val newestFile = dataFiles.maxBy(parser.toLong)
-    queue.resourceManager invokePrivate deleteOlderFiles(0, newestFile)
+    queue.resourceManager.invokePrivate(deleteOlderFiles(0, newestFile))
     dataFiles.filterNot(f => f == newestFile) shouldBe empty
     queue.close()
     delete(tempPath.toFile)

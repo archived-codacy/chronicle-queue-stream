@@ -113,7 +113,7 @@ class PersistentQueue[T](config: QueueConfig, onCommitCallback: Int => Unit = _ 
 
   if (Tailer != null && path.isFile) {
     mountIndexFile()
-    0 until outputPorts foreach { outputPortId =>
+    (0 until outputPorts).foreach { outputPortId =>
       val startIdx = read(outputPortId)
       logger.info("Setting idx for outputPort {} - {}", outputPortId.toString, startIdx.toString)
       reader(outputPortId).moveToIndex(startIdx)
@@ -145,7 +145,7 @@ class PersistentQueue[T](config: QueueConfig, onCommitCallback: Int => Unit = _ 
           output = {
             val element = serializer.readElement(wire)
             val index = reader(outputPortId).index
-            element map { e =>
+            element.map { e =>
               Event[T](outputPortId, index, e)
             }
           }
@@ -207,10 +207,10 @@ class PersistentQueue[T](config: QueueConfig, onCommitCallback: Int => Unit = _ 
     closed = true
     queue.close()
     if (Tailer != null) {
-      Option(indexStore) foreach { store =>
+      Option(indexStore).foreach { store =>
         if (store.refCount > 0) store.release()
       }
-      Option(indexFile) foreach { file =>
+      Option(indexFile).foreach { file =>
         file.release()
       }
     }
