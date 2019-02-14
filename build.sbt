@@ -16,6 +16,7 @@ ThisBuild / akkaVersion := "2.5.20"
 lazy val chronicleQueueStream = project
   .in(file("."))
   .settings(commonSettings)
+  .settings(publicMvnPublish)
   .settings(
     name := "chronicle-queue-stream",
     javacOptions in Compile ++= Seq("-source", "1.8", "-target", "1.8", "-Xlint:unchecked", "-Xlint:deprecation"),
