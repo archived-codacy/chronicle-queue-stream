@@ -37,8 +37,7 @@ lazy val chronicleQueueStream = project
     ),
     // this setting is not picked up properly from the plugin
     pgpPassphrase := Option(System.getenv("SONATYPE_GPG_PASSPHRASE"))
-      .map(_.toCharArray),
-    resolvers ~= { _.filterNot(_.name.toLowerCase.contains("codacy")) }
+      .map(_.toCharArray)
   )
 
 cancelable in Global := true
