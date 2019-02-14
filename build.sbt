@@ -28,7 +28,6 @@ lazy val chronicleQueueStream = project
       "ch.qos.logback" % "logback-classic" % "1.2.3",
       "com.typesafe.scala-logging" %% "scala-logging" % "3.9.0"
     ),
-    crossScalaVersions := Seq("2.11.12", "2.12.6"),
     description := "Akka Stream backed by Chronicle queue",
     scmInfo := Some(
       ScmInfo(
